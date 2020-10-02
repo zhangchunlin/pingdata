@@ -1,5 +1,1 @@
 uliweb3
-uliweb-ui
-uliweb-layout
-uliweb-apps
-sqlalchemy
