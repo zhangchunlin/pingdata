@@ -13,7 +13,7 @@ ERR_FAIL_TO_SAVE = 2
 @expose('/pingdata')
 class PingData(object):
     @expose('')
-    def index():
+    def index(self):
         return {}
     
     def api_get_ping_cfg(self):
