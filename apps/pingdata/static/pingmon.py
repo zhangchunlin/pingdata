@@ -37,7 +37,7 @@ class PingMonitor(object):
         async with aiohttp.ClientSession() as session:
             self.session = session
             while True:
-                async with session.get(self.url_get_cfg) as resp:
+                async with session.get(self.url_get_cfg, verify_ssl = False) as resp:
                     cfg = await resp.json()
                     self.cfg_rsp = cfg
                     self.pingcfg = cfg.get("pingcfg")
@@ -87,7 +87,7 @@ class PingMonitor(object):
         retry_wait_secs = self.pingcfg.get("retry_wait_secs", 20)
         for i in range(retry):
             try:
-                async with self.session.post(self.url_add_data, data=data) as resp:
+                async with self.session.post(self.url_add_data, data=data, verify_ssl = False) as resp:
                     if resp.status != 200:
                         log.error("get resp '%s', status: %s"%(await resp.text(), resp.status))
                         await asyncio.sleep(retry_wait_secs)
