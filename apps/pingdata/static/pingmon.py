@@ -27,8 +27,8 @@ class PingMonitor(object):
         parser.add_argument('-s','--server-url', default="http://localhost:8000", help = 'server url')
         self.args = parser.parse_args()
 
-        self.url_get_cfg = urllib.parse.urljoin(self.args.server_url, "/pingdata/api_get_ping_cfg")
-        self.url_add_data = urllib.parse.urljoin(self.args.server_url, "/pingdata/api_add_data")
+        self.url_get_cfg = urllib.parse.urljoin(self.args.server_url, "pingdata/api_get_ping_cfg")
+        self.url_add_data = urllib.parse.urljoin(self.args.server_url, "pingdata/api_add_data")
 
         self.loop = asyncio.get_event_loop()
         self.loop.run_until_complete(self.pingmon())
