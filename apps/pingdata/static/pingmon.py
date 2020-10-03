@@ -20,7 +20,7 @@ ERR_PING_OUTPUT = 2
 
 class PingMonitor(object):
     def __init__(self):
-        rawstr = r"""(\d*) packets transmitted, (\d*) received, (\d*)% packet loss, time (\d*)ms"""
+        rawstr = r"""(\d*) packets transmitted, (\d*) received,.* (\d*)% packet loss, time (\d*)ms"""
         self.cobj = re.compile(rawstr)
     
     def main(self):
