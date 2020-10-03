@@ -16,6 +16,7 @@ logging.basicConfig(level=logging.INFO,
 log = logging.getLogger(__name__)
 
 ERR_EMPTY_CONFIG = 1
+ERR_PING_OUTPUT = 2
 
 class PingMonitor(object):
     def __init__(self):
@@ -71,6 +72,9 @@ class PingMonitor(object):
         if isinstance(stdout, bytes):
             stdout = stdout.decode("utf8")
         mobj = self.cobj.search(stdout)
+        if not mobj:
+            log.error("could not match in stdout, last line: %s"%(stdout.split("\n")[-1].strip()))
+            return ERR_PING_OUTPUT
         l = mobj.groups()
         if len(l)==4:
             sent, receive, lostp, timems = l
@@ -79,8 +83,10 @@ class PingMonitor(object):
                 ip_from=self.ip, ip_to=host, timestamp=timestamp, datetime_str = datetime_str,
                 sent=sent, receive=receive, lostp=lostp, timems=timems,
             )))
+            return 0
         else:
             log.error("cannot found ping result in stdout")
+            return ERR_PING_OUTPUT
 
     async def submit_data(self, data):
         retry = self.pingcfg.get("retry", 6)
