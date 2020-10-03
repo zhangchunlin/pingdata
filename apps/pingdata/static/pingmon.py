@@ -73,7 +73,7 @@ class PingMonitor(object):
             stdout = stdout.decode("utf8")
         mobj = self.cobj.search(stdout)
         if not mobj:
-            log.error("could not match in stdout, last a few line: %s"%(stdout.split("\n")[-3:-1].strip()))
+            log.error("could not match in stdout, last a few line: %s"%("\n".join(stdout.split("\n")[-3:-1]).strip()))
             return ERR_PING_OUTPUT
         l = mobj.groups()
         if len(l)==4:
