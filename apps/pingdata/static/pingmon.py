@@ -38,22 +38,26 @@ class PingMonitor(object):
         async with aiohttp.ClientSession() as session:
             self.session = session
             while True:
-                async with session.get(self.url_get_cfg, verify_ssl = False) as resp:
-                    cfg = await resp.json()
-                    self.cfg_rsp = cfg
-                    self.pingcfg = cfg.get("pingcfg")
-                    self.ip = cfg.get("ip_from")
-                    next_waiting_secs = cfg["next_waiting_secs"]
-                    if next_waiting_secs>0:
-                        log.info("sleep %s seconds before next ping"%(next_waiting_secs))
-                        await asyncio.sleep(next_waiting_secs)
+                try:
+                    async with session.get(self.url_get_cfg, verify_ssl = False) as resp:
+                        cfg = await resp.json()
+                        self.cfg_rsp = cfg
+                        self.pingcfg = cfg.get("pingcfg")
+                        self.ip = cfg.get("ip_from")
+                        next_waiting_secs = cfg["next_waiting_secs"]
+                        if next_waiting_secs>0:
+                            log.info("sleep %s seconds before next ping"%(next_waiting_secs))
+                            await asyncio.sleep(next_waiting_secs)
 
-                    ip_to = cfg.get("ip_to", [])
-                    if not ip_to:
-                        log.error("empty config from server")
-                        sys.exit(ERR_EMPTY_CONFIG)
-                    for i in ip_to:
-                        task = asyncio.create_task(self.pinghost(i))
+                        ip_to = cfg.get("ip_to", [])
+                        if not ip_to:
+                            log.error("empty config from server")
+                            sys.exit(ERR_EMPTY_CONFIG)
+                        for i in ip_to:
+                            task = asyncio.create_task(self.pinghost(i))
+                except Exception as e:
+                    log.error("unexpect exception: %s"%(e))
+                    await asyncio.sleep(30)
             log.error("finished")
 
     async def pinghost(self, host):
