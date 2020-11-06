@@ -12,6 +12,9 @@ ERR_FAIL_TO_SAVE = 2
 
 @expose('/pingdata')
 class PingData(object):
+    def __begin__(self):
+        self.cntz = pendulum.timezone("Asia/Shanghai")
+
     @expose('')
     def index(self):
         return {}
@@ -52,8 +55,8 @@ class PingData(object):
         if not timestamp:
             log.error("bad data without timestamp: %s"%(d))
             return ERR_BAD_PARAM
-        dt = pendulum.from_timestamp(int(timestamp))
-        datestr = dt.format("YYYYMMDD")
+        cndt = self.cntz.convert(pendulum.from_timestamp(int(timestamp)))
+        datestr = cndt.format("YYYYMMDD")
         fname = "%s_%s"%(d.get("ip_from"),d.get("ip_to"))
         dpath = os.path.join(settings.PINGDATA.data_dir, datestr)
         if not os.path.exists(dpath):
