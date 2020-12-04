@@ -4,9 +4,124 @@
 {{end info_menu}}
 
 {{block content}}
+{{use "ui.echarts"}}
 <card>
-    <div style="min-height: 300px;">
-      
+    <div style="min-height: 600px;">
+        <row>
+            <i-col span="4">
+                <date-picker type="date" @on-change="date_on_change" :disabledDate="disable_date" placeholder="Select date"></date-picker>
+            </i-col>
+            <i-col span="18">
+                <i-select v-model="selected" multiple style="width:800px">
+                    <i-option v-for="item in options" :value="item.value" :key="item.value">{ item.label }</i-option>
+                </i-select>
+            </i-col>
+        </row>
+        <row>
+            <i-col span="24">
+                <div id="chart" style="width: 100%;height:400px;"></div>
+            </i-col>
+        </row>
     </div>
 </card>
 {{end content}}
+
+{{block mainapp_vue}}
+<script>
+var vm = new Vue({
+    el: '#mainapp',
+    delimiters: ['{', '}'],
+    data: {
+        date: "",
+        selected: [],
+        options: [],
+        chart: null,
+        chart_option: {
+            title: {text:"ping data"},
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross',
+                    label: {
+                        backgroundColor: '#6a7985'
+                    }
+                }
+            },
+            legend: {
+                top: 25
+            },
+            dataset: {},
+            xAxis: {type:"category"},
+            yAxis: {},
+            series: [],
+            dataZoom: [
+                {
+                    show: true,
+                    realtime: true,
+                    start: 0,
+                    end: 100
+                },
+                {
+                    type: 'inside',
+                    realtime: true,
+                    start: 0,
+                    end: 100
+                }
+            ],
+        }
+    },
+    methods: {
+        date_on_change: function(data){
+            this.date = data
+            this.update_options()
+        },
+        update_options: function(){
+            var thisp = this
+            $.ajax({
+                type: "POST",
+                url: "{{=url_for('pingdata.views.PingData.api_get_options')}}",
+                data: {date: thisp.date},
+                success: function (data) {
+                    if (Array.isArray(data)) {
+                        thisp.options = data
+                        thisp.selected = []
+                        for (var i in data) {
+                            thisp.selected.push(data[i].value)
+                        }
+                        thisp.show_pingdata()
+                    }
+                    else {
+                        thisp.options = []
+                        thisp.selected = []
+                    }
+                }
+            })
+        },
+        show_pingdata: function(){
+            var thisp = this
+            $.ajax({
+                type: "POST",
+                url: "{{=url_for('pingdata.views.PingData.api_get_chart_data')}}",
+                data: {
+                    date: thisp.date,
+                    selected: JSON.stringify(thisp.selected)
+                },
+                success: function (data) {
+                    thisp.chart_option.series = data.series
+                    thisp.chart_option.dataset.dimensions = data.dimensions
+                    thisp.chart_option.dataset.source = data.source
+                    thisp.chart.setOption(thisp.chart_option)
+                }
+            })
+        },
+        disable_date: function(){
+            return false
+        }
+    },
+    mounted: function(){
+        this.chart = echarts.init(document.getElementById('chart'));
+        this.chart.setOption(this.chart_option)
+    }
+})
+</script>
+{{end mainapp_vue}}
