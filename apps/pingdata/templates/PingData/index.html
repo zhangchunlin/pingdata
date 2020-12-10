@@ -1,5 +1,7 @@
 {{extend "iview/layout1.html"}}
 
+{{block title}}ping data{{end}}
+
 {{block info_menu}}
 {{end info_menu}}
 
@@ -37,7 +39,7 @@ var vm = new Vue({
         options: [],
         chart: null,
         chart_option: {
-            title: {text:"ping data"},
+            title: {text:"ping packet loss %"},
             tooltip: {
                 trigger: 'axis',
                 axisPointer: {
