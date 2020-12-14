@@ -83,6 +83,8 @@ class PingData(object):
             return json([])
         options = []
         for i in os.listdir(dpath):
+            if i == "max.json":
+                continue
             l = i.split("_")
             if not len(l) == 2:
                 log.error("unknown file '%s' found in '%s'" % (i, dpath))
