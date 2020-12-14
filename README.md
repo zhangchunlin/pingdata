@@ -38,3 +38,6 @@ then run:
 curl -o pingmon.py http://localhost:8000/static/pingmon.py ;python pingmon.py -s http://localhost:8000/
 ```
 
+## Screenshot
+
+![](doc/img/screenshot.png)
