@@ -75,6 +75,7 @@ class PingData(object):
         if not date:
             log.error("bad param: date = %s" % (date))
             return json([])
+        date = date[:10]
         dpath = os.path.join(settings.PINGDATA.data_dir,
                              "".join(date.split("-")))
         if not os.path.isdir(dpath):
@@ -92,6 +93,7 @@ class PingData(object):
     def api_get_chart_data(self):
         selected = json_.loads(request.values.get("selected"))
         date = request.values.get("date")
+        date = date[:10]
         dname = "".join(date.split("-"))
 
         series = []
@@ -126,3 +128,79 @@ class PingData(object):
             "dimensions": dimensions,
             "source": source
         })
+
+    def api_get_chart_data_trend(self):
+        start, end = json_.loads(request.values.get("date_range"))
+        start, end = "".join(start[:10].split("-")), "".join(end[:10].split("-"))
+        trend_data = self._get_trend(start, end)
+        dimensions_set = set()
+        source = []
+        for dstr, data in trend_data:
+            if not data:
+                data = {}
+            for k in data:
+                if k not in dimensions_set:
+                    dimensions_set.add(k)
+            data["date_str"] = "%s-%s-%s"%(dstr[:4], dstr[4:6], dstr[6:8])
+            source.append(data)
+        dimensions = ["date_str"] + sorted(list(dimensions_set))
+        return json({
+            "series": [{"type": "line"}]*len(dimensions_set),
+            "dimensions": dimensions,
+            "source": source
+        })
+    
+    def _get_trend(self, start, end):
+        def get_dstr():
+            dt = pendulum.from_format(start, "YYYYMMDD")
+            delta = pendulum.from_format(end, "YYYYMMDD") - dt
+            for i in range(delta.days+1):
+                yield dt.format("YYYYMMDD")
+                dt = dt.add(days=1)
+        def get_data():
+            data_dir = os.path.realpath(settings.PINGDATA.data_dir)
+            def get_max_lost():
+                for dstr in get_dstr():
+                    dpath = os.path.join(data_dir, dstr)
+                    assert(os.path.realpath(dpath).startswith(data_dir))
+                    yield dstr, self._get_max_lost(dpath)
+            return [(dstr, data) for dstr, data in get_max_lost()]
+        return get_data()
+
+    def _get_max_lost(self, dpath):
+        if not os.path.exists(dpath):
+            return
+        need_to_generate = False
+        max_fpath = os.path.join(dpath, "max.json")
+        found = os.path.isfile(max_fpath)
+        need_to_generate = not found
+        def iter_data_fpath():
+            for fname in os.listdir(dpath):
+                if fname == "max.json":
+                    continue
+                yield fname, os.path.join(dpath, fname)
+
+        if found:
+            mt1 = os.stat(max_fpath).st_mtime
+            for _, fpath in iter_data_fpath():
+                if os.path.isfile(fpath):
+                    if os.stat(fpath).st_mtime>mt1:
+                        need_to_generate = True
+        if need_to_generate:
+            def iter_max_lost():
+                for fname, fpath in iter_data_fpath():
+                    with open(fpath) as f:
+                        max_lost = 0
+                        for l in f:
+                            l = l.strip()
+                            if l:
+                                d = json_.loads(l)
+                                lostp = int(d["lostp"])
+                                if lostp > max_lost:
+                                    max_lost = lostp
+                        yield(fname, max_lost)
+            d = dict((fname, max_lost) for fname, max_lost in iter_max_lost())
+            json_.dump(d, open(max_fpath, "w"))
+            return d
+        else:
+            return json_.load(open(max_fpath))

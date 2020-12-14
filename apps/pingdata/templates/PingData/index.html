@@ -9,9 +9,24 @@
 {{use "ui.echarts"}}
 <card>
     <div style="min-height: 600px;">
+        <h1>Ping data trend</h1>
+        <Divider></Divider>
         <row>
             <i-col span="4">
-                <date-picker type="date" @on-change="date_on_change" :disabledDate="disable_date" placeholder="Select date"></date-picker>
+                <date-picker type="daterange" :value="date_range_trend" @on-change="date_on_change_trend" :options="options_daterange_trend" :disabledDate="disable_date" placeholder="Select date range"></date-picker>
+            </i-col>
+        </row>
+        <row>
+            <i-col span="24">
+                <div id="chart_trend" style="width: 100%;height:400px;"></div>
+            </i-col>
+        </row>
+
+        <h1>Ping data by day</h1>
+        <Divider></Divider>
+        <row>
+            <i-col span="4">
+                <date-picker type="date" :value="date" @on-change="date_on_change" :disabledDate="disable_date" placeholder="Select date"></date-picker>
             </i-col>
             <i-col span="18">
                 <i-select v-model="selected" multiple style="width:800px">
@@ -33,86 +48,175 @@
 var vm = new Vue({
     el: '#mainapp',
     delimiters: ['{', '}'],
-    data: {
-        date: "",
-        selected: [],
-        options: [],
-        chart: null,
-        chart_option: {
-            title: {text:"ping packet loss %"},
-            tooltip: {
-                trigger: 'axis',
-                axisPointer: {
-                    type: 'cross',
-                    label: {
-                        backgroundColor: '#6a7985'
-                    }
-                }
+    data: function() {
+        const get_range = function(range_secs){
+            const end = new Date();
+            const start = new Date();
+            start.setTime(start.getTime() - range_secs);
+            return [start, end];
+        }
+        const today = new Date()
+
+        return {
+            date_range_trend: get_range(3600 * 1000 * 24 * 7),
+            options_daterange_trend: {
+                shortcuts: [
+                    {text: '1 week',value: function(){return get_range(3600 * 1000 * 24 * 7)}},
+                    {text: '2 weeks',value: function(){return get_range(3600 * 1000 * 24 * 7 * 2)}},
+                    {text: '1 month',value: function(){return get_range(3600 * 1000 * 24 * 31)}},
+                    {text: '3 months',value: function(){return get_range(3600 * 1000 * 24 * 31 * 3)}}
+                ]
             },
-            legend: {
-                top: 25
-            },
-            dataset: {},
-            xAxis: {type:"category"},
-            yAxis: {},
-            series: [],
-            dataZoom: [
-                {
-                    show: true,
-                    realtime: true,
-                    start: 0,
-                    end: 100
+            chart_trend: null,
+            chart_trend_option: {
+                title: {
+                    text:"max ping packet loss % by day",
+                    padding: 15
                 },
-                {
-                    type: 'inside',
-                    realtime: true,
-                    start: 0,
-                    end: 100
-                }
-            ],
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross',
+                        label: {
+                            backgroundColor: '#6a7985'
+                        }
+                    }
+                },
+                legend: {
+                    top: 40
+                },
+                grid: {
+                    top: 100
+                },
+                dataset: {},
+                xAxis: {type:"category"},
+                yAxis: {max:100},
+                series: [],
+                dataZoom: [
+                    {
+                        show: true,
+                        realtime: true,
+                        start: 0,
+                        end: 100
+                    },
+                    {
+                        type: 'inside',
+                        realtime: true,
+                        start: 0,
+                        end: 100
+                    }
+                ]
+            },
+
+            date: today,
+            selected: [],
+            options: [],
+            chart: null,
+            chart_option: {
+                title: {text:"ping packet loss %"},
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross',
+                        label: {
+                            backgroundColor: '#6a7985'
+                        }
+                    }
+                },
+                legend: {
+                    top: 30
+                },
+                grid: {
+                    top: 90
+                },
+                dataset: {},
+                xAxis: {type:"category"},
+                yAxis: {max:100},
+                series: [],
+                dataZoom: [
+                    {
+                        show: true,
+                        realtime: true,
+                        start: 0,
+                        end: 100
+                    },
+                    {
+                        type: 'inside',
+                        realtime: true,
+                        start: 0,
+                        end: 100
+                    }
+                ]
+            }
         }
     },
     methods: {
+        date_on_change_trend: function(data){
+            this.date_range_trend = data
+            this.show_trend()
+        },
+        show_trend: function(){
+            const this_ = this
+            this_.chart_trend.showLoading()
+            $.ajax({
+                type: "POST",
+                url: "{{=url_for('pingdata.views.PingData.api_get_chart_data_trend')}}",
+                data: {
+                    date_range: JSON.stringify(this_.date_range_trend),
+                },
+                success: function (data) {
+                    this_.chart_trend_option.series = data.series
+                    this_.chart_trend_option.dataset.dimensions = data.dimensions
+                    this_.chart_trend_option.dataset.source = data.source
+                    this_.chart_trend.setOption(this_.chart_trend_option)
+                    this_.chart_trend.hideLoading()
+                }
+            })
+
+        },
+
         date_on_change: function(data){
             this.date = data
             this.update_options()
         },
         update_options: function(){
-            var thisp = this
+            const this_ = this
+            this.chart.showLoading()
             $.ajax({
                 type: "POST",
                 url: "{{=url_for('pingdata.views.PingData.api_get_options')}}",
-                data: {date: thisp.date},
+                data: {date: JSON.parse(JSON.stringify(this_.date))},
                 success: function (data) {
                     if (Array.isArray(data)) {
-                        thisp.options = data
-                        thisp.selected = []
+                        this_.options = data
+                        this_.selected = []
                         for (var i in data) {
-                            thisp.selected.push(data[i].value)
+                            this_.selected.push(data[i].value)
                         }
-                        thisp.show_pingdata()
+                        this_.show_pingdata()
                     }
                     else {
-                        thisp.options = []
-                        thisp.selected = []
+                        this_.options = []
+                        this_.selected = []
                     }
                 }
             })
         },
         show_pingdata: function(){
-            var thisp = this
+            var this_ = this
             $.ajax({
                 type: "POST",
                 url: "{{=url_for('pingdata.views.PingData.api_get_chart_data')}}",
                 data: {
-                    date: thisp.date,
-                    selected: JSON.stringify(thisp.selected)
+                    date: JSON.parse(JSON.stringify(this_.date)),
+                    selected: JSON.stringify(this_.selected)
                 },
                 success: function (data) {
-                    thisp.chart_option.series = data.series
-                    thisp.chart_option.dataset.dimensions = data.dimensions
-                    thisp.chart_option.dataset.source = data.source
-                    thisp.chart.setOption(thisp.chart_option)
+                    this_.chart_option.series = data.series
+                    this_.chart_option.dataset.dimensions = data.dimensions
+                    this_.chart_option.dataset.source = data.source
+                    this_.chart.setOption(this_.chart_option)
+                    this_.chart.hideLoading()
                 }
             })
         },
@@ -121,8 +225,17 @@ var vm = new Vue({
         }
     },
     mounted: function(){
+        
+        this.chart_trend = echarts.init(document.getElementById('chart_trend'));
+        this.show_trend()
+        const this_ = this
+        this.chart_trend.on('click', function(params){
+            this_.date = params.name
+            this_.update_options()
+        })
+
         this.chart = echarts.init(document.getElementById('chart'));
-        this.chart.setOption(this.chart_option)
+        this.update_options()
     }
 })
 </script>
