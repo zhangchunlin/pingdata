@@ -49,6 +49,7 @@ class PingData(object):
         return json({"ret": ret, "msg": "data save ok!"})
 
     def _save_data(self, d):
+        self._update_last_time(d)
         if not d:
             log.error("bad data: %s" % (d))
             return ERR_BAD_PARAM
@@ -69,6 +70,17 @@ class PingData(object):
             f.write("\n")
             return 0
         return ERR_FAIL_TO_SAVE
+
+    def _update_last_time(self, d):
+        clients = {}
+        fpath_clients = os.path.join(settings.PINGDATA.data_dir,"_clients.json")
+        if os.path.exists(fpath_clients):
+            try:
+                clients = json_.load(open(fpath_clients))
+            except Exception as e:
+                log.error(e)
+        clients[d['ip_from']] = d
+        json_.dump(clients, open(fpath_clients,"w"))
 
     def api_get_options(self):
         date = request.values.get("date")
@@ -128,7 +140,8 @@ class PingData(object):
         return json({
             "series": series,
             "dimensions": dimensions,
-            "source": source
+            "source": source,
+            "clients": self._get_clients()
         })
 
     def api_get_chart_data_trend(self):
@@ -149,7 +162,7 @@ class PingData(object):
         return json({
             "series": [{"type": "line"}]*len(dimensions_set),
             "dimensions": dimensions,
-            "source": source
+            "source": source,
         })
     
     def _get_trend(self, start, end):
@@ -206,3 +219,17 @@ class PingData(object):
             return d
         else:
             return json_.load(open(max_fpath))
+
+    def _get_clients(self):
+        clients = []
+        fpath_clients = os.path.join(settings.PINGDATA.data_dir,"_clients.json")
+        if os.path.exists(fpath_clients):
+            try:
+                data = json_.load(open(fpath_clients))
+                for k in settings.PINGDEST:
+                    d = data.get(k,{})
+                    if d:
+                        clients.append(d)
+            except Exception as e:
+                log.error(e)
+        return clients
