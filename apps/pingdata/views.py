@@ -3,6 +3,7 @@ from uliweb import expose, functions, settings
 import pendulum
 import logging
 import os
+import time
 import json as json_
 
 log = logging.getLogger('pingdata')
@@ -75,10 +76,13 @@ class PingData(object):
         clients = {}
         fpath_clients = os.path.join(settings.PINGDATA.data_dir,"_clients.json")
         if os.path.exists(fpath_clients):
-            try:
-                clients = json_.load(open(fpath_clients))
-            except Exception as e:
-                log.error(e)
+            for i in range(5):
+                try:
+                    clients = json_.load(open(fpath_clients))
+                    break
+                except Exception as e:
+                    log.error(e)
+                    time.sleep(1)
         clients[d['ip_from']] = d
         json_.dump(clients, open(fpath_clients,"w"))
 
