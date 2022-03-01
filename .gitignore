@@ -8,3 +8,4 @@ dist
 _git
 *.db
 pdata*
+__pycache__

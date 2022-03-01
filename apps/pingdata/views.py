@@ -234,6 +234,8 @@ class PingData(object):
                     d = data.get(k,{})
                     if d:
                         clients.append(d)
+                    else:
+                        clients.append({"ip_from":k,"submit_datetime_str":"unknown"})
             except Exception as e:
                 log.error(e)
         return clients
